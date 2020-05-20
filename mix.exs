@@ -4,7 +4,7 @@ defmodule LoggerDatadog.MixProject do
   def project do
     [
       app: :logger_datadog,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.7",
       elixirc_paths: paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
