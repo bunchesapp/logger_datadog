@@ -139,6 +139,10 @@ defmodule LoggerDatadog do
       |> normalize()
       |> Map.new()
 
+    request_id = Map.get(metadata, :request_id)
+    span_id = Map.get(metadata, :span_id)
+    trace_id = Map.get(metadata, :trace_id)
+
     log_map =
       %{
         "message" => msg,
@@ -147,15 +151,11 @@ defmodule LoggerDatadog do
         "timestamp" => Utilities.ts_to_iso(ts),
         "source" => "elixir",
         "host" => List.to_string(hostname),
-        "service" => state.service
+        "request_id" => request_id,
+        "service" => state.service,
+        "span_id" => span_id,
+        "trace_id" => trace_id
       }
-
-    if Map.has_key?(metadata, :request_id), do:
-      log_map |> Map.put(:request_id, Map.get(metadata, :request_id))
-    if Map.has_key?(metadata, :span_id), do:
-      log_map |> Map.put(:span_id, Map.get(metadata, :span_id))
-    if Map.has_key?(metadata, :trace_id), do:
-      log_map |> Map.put(:trace_id, Map.get(metadata, :trace_id))
 
     log = Jason.encode_to_iodata!(log_map)
 
