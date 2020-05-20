@@ -37,22 +37,39 @@ defmodule LoggerDatadog do
 
     metadata =
       meta
-      |> filter(state.metadata)
       |> normalise()
       |> Map.new()
 
-    data =
-      Jason.encode_to_iodata!(%{
-        "message" => msg,
-        "metadata" => metadata,
-        "level" => lvl,
-        "timestamp" => ts_to_iso(ts),
-        "source" => "elixir",
-        "host" => List.to_string(hostname),
-        "service" => state.service
-      })
+    data = if Map.has_key?(metadata, "query_name") do
+        Jason.encode_to_iodata!(%{
+          "message" => Keyword.has_key?(metadata, "query_name"),
+          "metadata" => metadata,
+          "level" => lvl,
+          "timestamp" => ts_to_iso(ts),
+          "source" => "elixir",
+          "host" => List.to_string(hostname),
+          "service" => state.service,
+          "trace_id" => metadata.trace_id,
+          "span_id" => metadata.span_id
+        })
+    else
+        Jason.encode_to_iodata!(%{
+          "message" => msg,
+          "metadata" => metadata,
+          "level" => lvl,
+          "timestamp" => ts_to_iso(ts),
+          "source" => "elixir",
+          "host" => List.to_string(hostname),
+          "service" => state.service
+        })
+    end
 
-    :ok = mod.send(socket, [state.api_token, " ", data, ?\r, ?\n])
+    send = mod.send(socket, [state.api_token, " ", data, ?\r, ?\n])
+    IO.inspect data
+    case send do
+      :ok -> :ok
+      _ -> {:error, :logging_error}
+    end
   end
 
   defp configure(opts, state \\ %__MODULE__{}) do
@@ -121,14 +138,47 @@ defmodule LoggerDatadog do
   defp filter(metadata, keys), do: Keyword.take(metadata, keys)
 
   defp normalise(list) when is_list(list) do
+    IO.puts "LIST"
+    IO.inspect list
     if Keyword.keyword?(list) do
-      Map.new(list, fn {atom, key} -> {atom, normalise(key)} end)
+      Map.new(list, &struct_normalise/1)
     else
       Enum.map(list, &normalise/1)
     end
   end
 
-  defp normalise(map) when is_map(map), do: Map.new(map, &normalise/1)
-  defp normalise(string) when is_binary(string), do: string
+  def struct_normalise({key, value}) do
+    if key != nil do
+      if not is_map(value) do
+        {key, normalise(value)}
+      else
+        {key, value}
+      end
+    else
+      {normalise(value)}
+    end
+  end
+
+  defp normalise(map) when is_map(map) do
+    IO.puts "MAP"
+    IO.inspect map
+    Map.new(map, &normalise/1)
+  end
+
+  defp normalise(string) when is_binary(string) do
+    IO.puts "STRING"
+    IO.inspect string
+    string
+  end
+
+  defp normalise(atom) when is_atom(atom) do
+    IO.puts "ATOM"
+    IO.inspect atom
+    atom
+  end
+
   defp normalise(other), do: inspect(other)
 end
+
+
+{:graphql_query, %{params: %{bunch_id: "f49d8343-77be-4dc8-ad01-dfa21abb7d2e"}, query_name: "Query: Fetch Messages No From/To"}}
