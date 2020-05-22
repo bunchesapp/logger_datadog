@@ -102,18 +102,21 @@ defmodule LoggerDatadog do
 
     # If TLS is enabled, setup SSL connection.
     # Otherwise, utilize the TCP socket.
-    if tls do
-      options =
-        if is_list(tls) do
-          tls
-        else
-          [handshake: :full]
-        end
-      {:ok, socket} = :ssl.connect(tcp_socket, options)
-      [{:ssl, socket}, {:gen_tcp, tcp_socket}]
-    else
-      [{:gen_tcp, tcp_socket}]
-    end
+    socket =
+      if tls do
+        options =
+          if is_list(tls) do
+            tls
+          else
+            [handshake: :full]
+          end
+        {:ok, socket} = :ssl.connect(tcp_socket, options)
+        [{:ssl, socket}, {:gen_tcp, tcp_socket}]
+      else
+        [{:gen_tcp, tcp_socket}]
+      end
+
+    struct(state, socket: socket)
   end
 
   defp socket_connect(nil, state) do
@@ -167,11 +170,16 @@ defmodule LoggerDatadog do
       end
     rescue
       _e ->
-        retry = socket_connect(nil, state)
-                |> mod.send([state.api_token, " ", log, ?\r, ?\n])
-        case retry do
-          :ok -> :ok
-          {:ok, _} -> :ok
+        try do
+          socket_connect(nil, state)
+          {mod, socket} = hd(state.socket)
+          retry = mod.send(socket, [state.api_token, " ", log, ?\r, ?\n])
+          case retry do
+            :ok -> :ok
+            {:ok, _} -> :ok
+            _ -> {:error, :send_log_error}
+          end
+        catch
           _ -> {:error, :send_log_error}
         end
     end
