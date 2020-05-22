@@ -116,7 +116,7 @@ defmodule LoggerDatadog do
         [{:gen_tcp, tcp_socket}]
       end
 
-    struct(state, socket: socket)
+    %{state | socket: socket}
   end
 
   defp socket_connect(nil, state) do
