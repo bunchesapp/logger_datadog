@@ -82,7 +82,7 @@ defmodule LoggerDatadog do
 
     # Open Socket to Datadog (TCP -> TLS if configured)
     socket_options = [endpoint: endpoint, port: port, tls: tls]
-    socket = socket_connect(socket_options, state)
+    %{socket: socket} = socket_connect(socket_options, state)
 
     struct(state,
       api_token: api_token,
