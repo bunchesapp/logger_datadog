@@ -11,6 +11,7 @@ defmodule LoggerDatadog do
   ## Configuration options:
   - API Token (`:api_token`): Datadog api token. Find this in Datadog in Integrations -> API. This is a required value for LoggerDatadog, and is set to `null` initially.
   - Endpoint (`:endpoint`): Datadog endpoint of the intake service being used. The default is Datadog's default endpoint of `intake.logs.datadoghq.com`.
+  - Hostname (`:hostname`): Hostname to report logs under to Datadog. Defaults to the local hostname as given by Erlang's `:inet` module.
   - Level (`:level`): Logger level that should be sent to Datadog. Options are one of the following values, in ascending priority: [`:debug`/`:all`, `:info`, `:notice`, `:warning`, `:error`, `:critical`, `:alert`, `:emergency`]. `:none` is also a valid option. `:debug` is the default value.
   - Metadata (`:metadata`): Metadata that gets logged alongside the actual log value.
   - Port (`:port`): Datadog port of the intake service being used. The default is Datadog's default value of `10514`.
@@ -26,6 +27,7 @@ defmodule LoggerDatadog do
   @default_datadog_endpoint "intake.logs.datadoghq.com"
 
   defstruct [:api_token,
+             :hostname,
              level: :debug,
              metadata: [],
              service: "elixir",
