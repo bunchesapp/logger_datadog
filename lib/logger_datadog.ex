@@ -69,6 +69,8 @@ defmodule LoggerDatadog do
         binary when is_binary(binary) -> String.to_charlist(binary)
         other -> other
       end
+    {:ok, inet_hostname} = :inet.gethostname()
+    hostname = Keyword.get(opts, :hostname, inet_hostname)
     level = Keyword.get(opts, :level, state.level)
     metadata = Keyword.get(opts, :metadata, state.metadata)
     port = Keyword.get(opts, :port, 10514)
@@ -86,6 +88,7 @@ defmodule LoggerDatadog do
 
     struct(state,
       api_token: api_token,
+      hostname: hostname,
       level: level,
       metadata: metadata,
       service: service,
@@ -134,7 +137,6 @@ defmodule LoggerDatadog do
   @doc false
   defp send_log(lvl, {Logger, msg, ts, meta}, state) do
     {mod, socket} = hd(state.socket)
-    {:ok, hostname} = :inet.gethostname()
 
     metadata =
       meta
@@ -153,7 +155,7 @@ defmodule LoggerDatadog do
         "level" => lvl,
         "timestamp" => Utilities.ts_to_iso(ts),
         "source" => "elixir",
-        "host" => List.to_string(hostname),
+        "host" => state.hostname,
         "request_id" => request_id,
         "service" => state.service,
         "span_id" => span_id,
