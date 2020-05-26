@@ -11,7 +11,6 @@ defmodule LoggerDatadog do
   ## Configuration options:
   - API Token (`:api_token`): Datadog api token. Find this in Datadog in Integrations -> API. This is a required value for LoggerDatadog, and is set to `null` initially.
   - Endpoint (`:endpoint`): Datadog endpoint of the intake service being used. The default is Datadog's default endpoint of `intake.logs.datadoghq.com`.
-  - Hostname (`:hostname`): Hostname to report logs under to Datadog. Defaults to the local hostname as given by Erlang's `:inet` module.
   - Level (`:level`): Logger level that should be sent to Datadog. Options are one of the following values, in ascending priority: [`:debug`/`:all`, `:info`, `:notice`, `:warning`, `:error`, `:critical`, `:alert`, `:emergency`]. `:none` is also a valid option. `:debug` is the default value.
   - Metadata (`:metadata`): Metadata that gets logged alongside the actual log value.
   - Port (`:port`): Datadog port of the intake service being used. The default is Datadog's default value of `10514`.
@@ -27,7 +26,6 @@ defmodule LoggerDatadog do
   @default_datadog_endpoint "intake.logs.datadoghq.com"
 
   defstruct [:api_token,
-             :hostname,
              level: :debug,
              metadata: [],
              service: "elixir",
@@ -71,8 +69,6 @@ defmodule LoggerDatadog do
         binary when is_binary(binary) -> String.to_charlist(binary)
         other -> other
       end
-    {:ok, inet_hostname} = :inet.gethostname()
-    hostname = Keyword.get(opts, :hostname, inet_hostname)
     level = Keyword.get(opts, :level, state.level)
     metadata = Keyword.get(opts, :metadata, state.metadata)
     port = Keyword.get(opts, :port, 10514)
@@ -90,7 +86,6 @@ defmodule LoggerDatadog do
 
     struct(state,
       api_token: api_token,
-      hostname: hostname,
       level: level,
       metadata: metadata,
       service: service,
@@ -157,11 +152,12 @@ defmodule LoggerDatadog do
         "level" => lvl,
         "timestamp" => Utilities.ts_to_iso(ts),
         "source" => "elixir",
-        "host" => state.hostname,
         "request_id" => request_id,
         "service" => state.service,
-        "span_id" => span_id,
-        "trace_id" => trace_id
+        "dd" => %{
+          "span_id" => span_id,
+          "trace_id" => trace_id
+        }
       }
 
     log = Jason.encode_to_iodata!(log_map)
