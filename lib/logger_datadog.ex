@@ -25,11 +25,17 @@ defmodule LoggerDatadog do
 
   @default_datadog_endpoint "intake.logs.datadoghq.com"
 
-  defstruct [:api_token,
+  @derive Jason.Encoder
+  defstruct [api_token: nil,
+             dd: nil,
              level: :debug,
-             metadata: [],
+             message: nil,
+             metadata: nil,
+             request_id: nil,
              service: "elixir",
-             socket: []]
+             socket: [],
+             source: "elixir",
+             timestamp: nil]
 
   @doc false
   @impl true
@@ -145,20 +151,19 @@ defmodule LoggerDatadog do
     span_id = Map.get(metadata, :span_id)
     trace_id = Map.get(metadata, :trace_id)
 
-    log_map =
-      %{
-        "message" => msg,
-        "metadata" => metadata,
-        "level" => lvl,
-        "timestamp" => Utilities.ts_to_iso(ts),
-        "source" => "elixir",
-        "request_id" => request_id,
-        "service" => state.service,
-        "dd" => %{
-          "span_id" => span_id,
-          "trace_id" => trace_id
-        }
+    log_map = %LoggerDatadog{
+      message: msg,
+      metadata: metadata,
+      level: lvl,
+      timestamp: Utilities.ts_to_iso(ts),
+      source: "elixir",
+      request_id: request_id,
+      service: state.service,
+      dd: %{
+        span_id: span_id,
+        trace_id: trace_id
       }
+    }
 
     log = Jason.encode_to_iodata!(log_map)
 
